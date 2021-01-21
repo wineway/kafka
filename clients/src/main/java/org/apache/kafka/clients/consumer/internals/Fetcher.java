@@ -104,6 +104,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -147,7 +148,7 @@ public class Fetcher<K, V> implements Closeable {
     private final ConsumerMetadata metadata;
     private final FetchManagerMetrics sensors;
     private final SubscriptionState subscriptions;
-    private final ConcurrentLinkedQueue<CompletedFetch> completedFetches;
+    public final ConcurrentLinkedQueue<CompletedFetch> completedFetches;
     private final BufferSupplier decompressionBufferSupplier = BufferSupplier.create();
     private final Deserializer<K> keyDeserializer;
     private final Deserializer<V> valueDeserializer;
@@ -160,6 +161,11 @@ public class Fetcher<K, V> implements Closeable {
     private final ApiVersions apiVersions;
     private final AtomicInteger metadataUpdateVersion = new AtomicInteger(-1);
 
+    private List<RequestFutureListener<ClientResponse>> listeners = new ArrayList<>();
+
+    public void addListener(RequestFutureListener<ClientResponse> listener) {
+        listeners.add(listener);
+    }
 
     private CompletedFetch nextInLineFetch = null;
 
@@ -271,6 +277,7 @@ public class Fetcher<K, V> implements Closeable {
             // disconnection being handled by the heartbeat thread) which will mean the listener
             // will be invoked synchronously.
             this.nodesWithPendingFetchRequests.add(entry.getKey().id());
+            listeners.forEach(future::addListener);
             future.addListener(new RequestFutureListener<ClientResponse>() {
                 @Override
                 public void onSuccess(ClientResponse resp) {
@@ -598,10 +605,11 @@ public class Fetcher<K, V> implements Closeable {
      *         the defaultResetPolicy is NONE
      * @throws TopicAuthorizationException If there is TopicAuthorization error in fetchResponse.
      */
-    public Map<TopicPartition, List<ConsumerRecord<K, V>>> fetchedRecords() {
+
+    public Map<TopicPartition, List<ConsumerRecord<K, V>>> fetchedRecords(int maxCount) {
         Map<TopicPartition, List<ConsumerRecord<K, V>>> fetched = new HashMap<>();
         Queue<CompletedFetch> pausedCompletedFetches = new ArrayDeque<>();
-        int recordsRemaining = maxPollRecords;
+        int recordsRemaining = maxCount;
 
         try {
             while (recordsRemaining > 0) {
@@ -665,6 +673,10 @@ public class Fetcher<K, V> implements Closeable {
         }
 
         return fetched;
+    }
+
+    public Map<TopicPartition, List<ConsumerRecord<K, V>>> fetchedRecords() {
+        return fetchedRecords(maxPollRecords);
     }
 
     private List<ConsumerRecord<K, V>> fetchRecords(CompletedFetch completedFetch, int maxRecords) {
