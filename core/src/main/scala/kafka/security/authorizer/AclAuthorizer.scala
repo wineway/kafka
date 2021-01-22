@@ -287,7 +287,7 @@ class AclAuthorizer extends Authorizer with Logging {
     }.map(CompletableFuture.completedFuture[AclDeleteResult]).asJava
   }
 
-  @nowarn("cat=optimizer")
+//  @nowarn("cat=optimizer")
   override def acls(filter: AclBindingFilter): lang.Iterable[AclBinding] = {
     val aclBindings = new util.ArrayList[AclBinding]()
     // Using `forKeyValue` triggers a scalac bug related to suppression of optimizer warnings, we
@@ -540,7 +540,7 @@ class AclAuthorizer extends Authorizer with Logging {
     }
   }
 
-  @nowarn("cat=optimizer")
+//  @nowarn("cat=optimizer")
   private def getAclsFromCache(resource: ResourcePattern): VersionedAcls = {
     aclCache.getOrElse(resource, throw new IllegalArgumentException(s"ACLs do not exist in the cache for resource $resource"))
   }

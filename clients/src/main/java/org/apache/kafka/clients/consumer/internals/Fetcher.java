@@ -104,7 +104,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -354,6 +353,15 @@ public class Fetcher<K, V> implements Closeable {
 
         }
         return fetchRequestMap.size();
+    }
+
+    public void sendAndTransmitFetches() {
+        if (sendFetches() > 0 || client.hasPendingRequests())
+          client.transmitSends();
+    }
+
+    public void pollNow() {
+        client.pollNoWakeup();
     }
 
     /**

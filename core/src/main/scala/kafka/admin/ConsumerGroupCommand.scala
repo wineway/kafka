@@ -555,7 +555,7 @@ object ConsumerGroupCommand extends Logging {
     /**
       * Returns the state of the specified consumer group and partition assignment states
       */
-    @nowarn("cat=optimizer")
+//    @nowarn("cat=optimizer")
     def collectGroupOffsets(groupId: String): (Option[String], Option[Seq[PartitionAssignmentState]]) = {
       collectGroupsOffsets(List(groupId)).getOrElse(groupId, (None, None))
     }
